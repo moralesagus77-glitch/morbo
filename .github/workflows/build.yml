@@ -1,0 +1,45 @@
+name: Build IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: Musica27
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Generar el proyecto
+        run: xcodegen generate
+
+      - name: Compilar (sin firmar)
+        run: |
+          xcodebuild -project Musica27.xcodeproj -scheme Musica27 \
+            -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Empaquetar el .ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/Musica27.app Payload/
+          zip -qry Musica27.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Musica27-ipa
+          path: Musica27/Musica27.ipa
